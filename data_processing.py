@@ -4,6 +4,11 @@ from sklearn.linear_model import LinearRegression, Ridge
 from statsmodels.tsa.arima.model import ARIMA
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import mean_absolute_error, mean_squared_error
+from sklearn.svm import SVR
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+import numpy as np
+
 
 # Load data, skipping the first two rows
 data = pd.read_csv('historical_weather_data.csv', skiprows=2)
@@ -66,3 +71,9 @@ grid_search.fit(X_train, y_train)
 y_pred_ridge = grid_search.predict(X_test)
 print()
 print(f'Ridge Regression MAE: {mean_absolute_error(y_test, y_pred_ridge)}')
+
+#Support Vector Matrix
+regr = make_pipeline(StandardScaler(), SVR(C=1.0, epsilon=0.2))
+regr.fit(X_train, y_train)
+
+print(regr.predict(X_test))
