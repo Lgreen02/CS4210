@@ -10,52 +10,80 @@ from sklearn.preprocessing import StandardScaler
 import numpy as np
 
 
-# Load data, skipping the first two rows
-data = pd.read_csv('historical_weather_data.csv', skiprows=2)
+# Load data
+data = pd.read_csv('historical_large_max.csv')
 
-# Rename columns appropriately
-data.columns = ['time', 'temperature_2m']
+# Split data into train and test sets
+train_data, test_data = train_test_split(data, test_size=0.2, random_state=42)
 
-# Check column names
-print(data.columns)
-print()
+# Separate features (X) and target (y)
+train_y = train_data.iloc[:, 0]  # First column as target
+train_X = train_data.drop(data.columns[0], axis=1)  # All other columns as features
+test_y = test_data.iloc[:, 0]
+test_X = test_data.drop(data.columns[0], axis=1)
 
-# Inspect the first few rows of data
-print(data.head())
+# Ensure the date column is in datetime format
+train_X['Date'] = pd.to_datetime(train_X.iloc[:, 0])  # Assuming the date is the first column
+test_X['Date'] = pd.to_datetime(test_X.iloc[:, 0])
 
-# Preprocessing
-data.fillna(method='ffill', inplace=True)  # Handle missing values
+# Extract date components
+for df in [train_X, test_X]:
+    df['Year'] = df['Date'].dt.year
+    df['Month'] = df['Date'].dt.month
+    df['DayOfYear'] = df['Date'].dt.dayofyear
+    df['DayOfWeek'] = df['Date'].dt.dayofweek
 
-# Convert 'time' to datetime and set as index
-data['time'] = pd.to_datetime(data['time'])
-data.set_index('time', inplace=True)
+# Drop the original date column
+train_X = train_X.drop(columns=['Date'])
+test_X = test_X.drop(columns=['Date'])
+train_X = train_X.drop(columns=['time'])
+test_time = test_X['time']
+test_X = test_X.drop(columns=['time'])
 
-# Sort the data by date to ensure monotonic order
-data = data.sort_index()
-
-# Infer frequency and explicitly set it
-freq = pd.infer_freq(data.index)
-if freq is None:
-    freq = 'H'  # Assuming hourly frequency, adjust as necessary
-data = data.asfreq(freq)
-
-# Feature Engineering
-data['Month'] = data.index.month
-
-# Define features and target
-X = data[['Month']]
-y = data['temperature_2m']
-
-# Train-Test Split
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-# Linear Regression Model
+# Now train_X and test_X are ready with transformed date features
+print(train_X.head())
+print(test_X.head())
+print(train_y.head())
 lin_reg = LinearRegression()
-lin_reg.fit(X_train, y_train)
-y_pred_lin = lin_reg.predict(X_test)
+lin_reg.fit(train_X, train_y)
+y_pred_lin = lin_reg.predict(test_X)
 print()
-print(f'Linear Regression MAE: {mean_absolute_error(y_test, y_pred_lin)}')
+print(f'Linear Regression MAE: {mean_absolute_error(test_y, y_pred_lin)}')
 
+# Ridge Regression Model
+ridge = Ridge()
+param_grid = {'alpha': [0.1, 1.0, 10.0]}
+grid_search = GridSearchCV(ridge, param_grid, cv=5)
+grid_search.fit(train_X, train_y)
+y_pred_ridge = grid_search.predict(test_X)
+print()
+print(f'Ridge Regression MAE: {mean_absolute_error(test_y, y_pred_ridge)}')   
+#import matplotlib.pyplot as plt
+"""
+# Ensure test_y is aligned with the predicted values
+test_y = test_y.reset_index(drop=True)
+y_pred_lin = pd.Series(y_pred_lin)  # Convert predictions to Series for consistency
+
+# Extract time values from the original test dataset
+time_axis = pd.to_datetime(test_data.iloc[:, 0])  # Assuming the first column contains date/time
+
+# Plot actual vs predicted temperatures
+plt.figure(figsize=(12, 6))
+plt.plot(time_axis, test_y, label='Actual Temperature', color='blue', alpha=0.7)
+plt.plot(time_axis, y_pred_lin, label='Predicted Temperature', color='red', linestyle='--', alpha=0.7)
+
+# Add plot titles and labels
+plt.title('Temperature Prediction vs Actual', fontsize=16)
+plt.xlabel('Time', fontsize=14)
+plt.ylabel('Temperature (°F)', fontsize=14)
+plt.legend(fontsize=12)
+plt.grid(alpha=0.3)
+plt.tight_layout()
+
+# Display the plot
+plt.show()
+"""
+"""
 # ARIMA Model
 arima_model = ARIMA(y_train, order=(5,1,0))
 arima_result = arima_model.fit()
@@ -63,17 +91,11 @@ y_pred_arima = arima_result.forecast(steps=len(y_test))
 print()
 print(f'ARIMA MAE: {mean_absolute_error(y_test, y_pred_arima)}')
 
-# Ridge Regression Model
-ridge = Ridge()
-param_grid = {'alpha': [0.1, 1.0, 10.0]}
-grid_search = GridSearchCV(ridge, param_grid, cv=5)
-grid_search.fit(X_train, y_train)
-y_pred_ridge = grid_search.predict(X_test)
-print()
-print(f'Ridge Regression MAE: {mean_absolute_error(y_test, y_pred_ridge)}')
+
 
 #Support Vector Matrix
 regr = make_pipeline(StandardScaler(), SVR(C=1.0, epsilon=0.2))
 regr.fit(X_train, y_train)
 
 print(regr.predict(X_test))
+"""
