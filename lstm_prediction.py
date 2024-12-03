@@ -38,10 +38,10 @@ test_X['Date'] = pd.to_datetime(test_X.iloc[:, 0])
 
 # Extract date components
 for df in [train_X, test_X, val_X]:
-    df['Year'] = df['Date'].dt.year
-    df['Month'] = df['Date'].dt.month
+    #df['Year'] = df['Date'].dt.year
+    #df['Month'] = df['Date'].dt.month
     df['DayOfYear'] = df['Date'].dt.dayofyear
-    df['DayOfWeek'] = df['Date'].dt.dayofweek
+    #df['DayOfWeek'] = df['Date'].dt.dayofweek
 
 # Drop the original date column
 train_X = train_X.drop(columns=['Date'])
@@ -57,7 +57,7 @@ val_X = val_X.drop(columns=['time'])
 # Scale the features for better neural network performance
 scaler = StandardScaler()
 train_X_scaled = scaler.fit_transform(train_X)
-print(val_X)
+print(val_X['DayOfYear'])
 val_X_scaled = scaler.fit_transform(val_X)
 test_X_scaled = scaler.transform(test_X)
 # K-Fold setup
