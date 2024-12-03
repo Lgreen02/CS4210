@@ -38,7 +38,7 @@ test_X['Date'] = pd.to_datetime(test_X.iloc[:, 0])
 
 # Extract date components
 for df in [train_X, test_X, val_X]:
-    #df['Year'] = df['Date'].dt.year
+    df['Year'] = df['Date'].dt.year
     #df['Month'] = df['Date'].dt.month
     df['DayOfYear'] = df['Date'].dt.dayofyear
     #df['DayOfWeek'] = df['Date'].dt.dayofweek
@@ -52,7 +52,9 @@ test_time = test_X['time']
 test_X = test_X.drop(columns=['time'])
 val_X = val_X.drop(columns=['time'])
 
-
+future_pred_X = []
+for i in range(366):
+    future_pred_X.append([i])
 
 # Scale the features for better neural network performance
 scaler = StandardScaler()
@@ -60,6 +62,7 @@ train_X_scaled = scaler.fit_transform(train_X)
 print(val_X['DayOfYear'])
 val_X_scaled = scaler.fit_transform(val_X)
 test_X_scaled = scaler.transform(test_X)
+#future_pred_X_scaled = scaler.transform(future_pred_X)
 # K-Fold setup
 kf = KFold(n_splits=5, shuffle=True, random_state=42)
 fold = 1
@@ -96,7 +99,7 @@ for train_index, val_index in kf.split(train_X_scaled):
 
     # Predict on validation set
     y_val_pred = model.predict(X_val)
-
+    
     # Evaluate the model
     mse_fold = mean_squared_error(y_val, y_val_pred)
     mae_fold = mean_absolute_error(y_val, y_val_pred)
@@ -126,10 +129,48 @@ model.fit(
 
 # Predict on test set
 y_pred_nn = model.predict(test_X_scaled)
+accurate_results = 0
+errors = []
+"""
+y_pred_future = model.predict(future_pred_X_scaled)
+# Ensure test_y is aligned with the predicted values
+#data_one_week_y = data_one_week_y.reset_index(drop=True)
+#y_pred_future = pd.Series(y_pred_future)  # Convert predictions to Series for consistency
 
+# Extract time values from the original test dataset
+time_axis = future_pred_X # Assuming the first column contains date/time
+
+# Plot actual vs predicted temperatures
+plt.figure(figsize=(12, 6))
+#plt.plot(time_axis, future_pred_X, label='Actual Temperature', color='blue', alpha=0.7)
+plt.plot(time_axis, y_pred_future, label='Predicted Temperature', color='red', linestyle='--', alpha=0.7)
+
+# Add plot titles and labels
+plt.title('Temperature Prediction vs Actual', fontsize=16)
+plt.xlabel('Time', fontsize=14)
+plt.ylabel('Temperature (°F)', fontsize=14)
+plt.legend(fontsize=12)
+plt.grid(alpha=0.3)
+plt.tight_layout()
+
+# Display the plot
+plt.show()
+"""
+for n, pred in zip(test_y, y_pred_nn):
+    print("Actual: ", n, " | | Predicted: ", pred)
+    if abs(n - pred) < 8:
+        accurate_results += 1
+    errors.append(abs(n-pred))
+print("The % of results within 2 degrees: ", (accurate_results / len(test_y)))
 # Evaluate final performance
 final_mse = mean_squared_error(test_y, y_pred_nn)
 final_mae = mean_absolute_error(test_y, y_pred_nn)
-
+print("Mean absolute error: ",final_mae)
+"""
+# Create the box plot
+plt.boxplot(errors)
+plt.title("Box and Whisker Plot")
+plt.show()
 print(f"Final Model - Test MSE: {final_mse}")
 print(f"Final Model - Test MAE: {final_mae}")
+"""
