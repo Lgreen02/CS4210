@@ -18,7 +18,8 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import ReduceLROnPlateau
 from sklearn.model_selection import KFold
 # Load data
-data = pd.read_csv('historical_large_max.csv')
+data = pd.read_csv('2012weather.csv')
+pred_data = pd.read_csv('2023weather.csv')
 
 # Split data into train and test sets
 train_data, test_data = train_test_split(data, test_size=0.2, random_state=42)
@@ -30,14 +31,17 @@ val_y = val.iloc[:, 0]  # First column as target
 val_X = val.drop(data.columns[0], axis=1)  # All other columns as features
 test_y = test_data.iloc[:, 0]
 test_X = test_data.drop(data.columns[0], axis=1)
+pred_y = pred_data.iloc[:, 0]
+pred_X = pred_data.drop(pred_data.columns[0], axis=1)
 
 # Ensure the date column is in datetime format
 train_X['Date'] = pd.to_datetime(train_X.iloc[:, 0])  # Assuming the date is the first column
 val_X['Date'] = pd.to_datetime(val_X.iloc[:, 0])  # Assuming the date is the first column
 test_X['Date'] = pd.to_datetime(test_X.iloc[:, 0])
+pred_X['Date'] = pd.to_datetime(pred_X.iloc[:,0])
 
 # Extract date components
-for df in [train_X, test_X, val_X]:
+for df in [train_X, test_X, val_X, pred_X]:
     df['Year'] = df['Date'].dt.year
     #df['Month'] = df['Date'].dt.month
     df['DayOfYear'] = df['Date'].dt.dayofyear
@@ -51,10 +55,12 @@ train_X = train_X.drop(columns=['time'])
 test_time = test_X['time']
 test_X = test_X.drop(columns=['time'])
 val_X = val_X.drop(columns=['time'])
+pred_X = pred_X.drop(columns=['time'])
+pred_X = pred_X.drop(columns=['Date'])
 
-future_pred_X = []
-for i in range(366):
-    future_pred_X.append([i])
+#future_pred_X = []
+#for i in range(366):
+    #future_pred_X.append([i])
 
 # Scale the features for better neural network performance
 scaler = StandardScaler()
@@ -62,7 +68,7 @@ train_X_scaled = scaler.fit_transform(train_X)
 print(val_X['DayOfYear'])
 val_X_scaled = scaler.fit_transform(val_X)
 test_X_scaled = scaler.transform(test_X)
-#future_pred_X_scaled = scaler.transform(future_pred_X)
+pred_X_scaled = scaler.transform(pred_X)
 # K-Fold setup
 kf = KFold(n_splits=5, shuffle=True, random_state=42)
 fold = 1
@@ -131,18 +137,18 @@ model.fit(
 y_pred_nn = model.predict(test_X_scaled)
 accurate_results = 0
 errors = []
-"""
-y_pred_future = model.predict(future_pred_X_scaled)
+
+y_pred_future = model.predict(pred_X_scaled)
 # Ensure test_y is aligned with the predicted values
 #data_one_week_y = data_one_week_y.reset_index(drop=True)
 #y_pred_future = pd.Series(y_pred_future)  # Convert predictions to Series for consistency
 
 # Extract time values from the original test dataset
-time_axis = future_pred_X # Assuming the first column contains date/time
+time_axis = pred_X['DayOfYear'] # Assuming the first column contains date/time
 
 # Plot actual vs predicted temperatures
 plt.figure(figsize=(12, 6))
-#plt.plot(time_axis, future_pred_X, label='Actual Temperature', color='blue', alpha=0.7)
+plt.plot(time_axis, pred_y, label='Actual Temperature', color='blue', alpha=0.7)
 plt.plot(time_axis, y_pred_future, label='Predicted Temperature', color='red', linestyle='--', alpha=0.7)
 
 # Add plot titles and labels
@@ -155,7 +161,7 @@ plt.tight_layout()
 
 # Display the plot
 plt.show()
-"""
+
 for n, pred in zip(test_y, y_pred_nn):
     print("Actual: ", n, " | | Predicted: ", pred)
     if abs(n - pred) < 8:
